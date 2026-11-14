@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Hello Triangle - WebGL</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      background: #7c7a7a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    "
+  >
+    <canvas id="glCanvas" width="600" height="600"></canvas>
+
+    <script>
+      const canvas = document.getElementById("glCanvas");
+      const gl = canvas.getContext("webgl2"); // Inicia o contexto WebGL 2 (baseado no OpenGL ES 3.0)
+
+      if (!gl) {
+        alert("Seu navegador não suporta WebGL 2.");
+      }
+
+      let topoX = 0.0,
+        topoY = -0.5,
+        infEsqX = -0.5,
+        infEsqY = -0.5,
+        infDirX = 0.5,
+        infDirY = -0.5
+
+      setInterval(() => {
+          topoX += 0.1
+          topoY += 0.1
+          infEsqX += 0.1
+          infEsqY += 0.1
+          infDirX += 0.1
+          infDirY += 0.1
+
+        // 1. VERTEX SHADER: Define a posição de cada vértice na tela (executado na GPU)
+        const vertexShaderSource = `#version 300 es
+      in vec2 a_posicao;
+      void main() {
+        gl_Position = vec4(a_posicao, 0.0, 1.0);
+      }
+    `;
+
+        // 2. FRAGMENT SHADER: Define a cor de cada pixel dentro do triângulo (executado na GPU)
+        const fragmentShaderSource = `#version 300 es
+      precision highp float;
+      out vec4 outColor;
+      void main() {
+        outColor = vec4(1.0, 0.4, 0.2, 1.0); // Cor Laranja (R, G, B, Alpha)
+      }
+    `;
+
+        // Função auxiliar para compilar os shaders
+        function criarShader(gl, tipo, codigo) {
+          const shader = gl.createShader(tipo);
+          gl.shaderSource(shader, codigo);
+          gl.compileShader(shader);
+          return shader;
+        }
+
+        // 3. CRIA O PROGRAMA GRÁFICO (Linka os shaders na GPU)
+        const vs = criarShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fs = criarShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const programa = gl.createProgram();
+        gl.attachShader(programa, vs);
+        gl.attachShader(programa, fs);
+        gl.linkProgram(programa);
+        gl.useProgram(programa);
+
+        // 4. DADOS DOS VÉRTICES (Coordenadas normalizadas de -1.0 a 1.0)
+        let vertices = null;
+        vertices = new Float32Array([
+          Math.sin(topoX * (Math.PI/180))/2,
+          Math.cos((-topoY) * (Math.PI/180))/2, // Topo
+          -Math.cos(-infEsqX * (Math.PI/180))/2,
+          Math.sin(infEsqY * (Math.PI/180))/2, // Inferior esquerdo
+          -Math.sin((infDirX * (Math.PI/180)))/2,
+          -Math.cos((infDirY * (Math.PI/180)))/2, // Inferior direito
+        ]);
+        // 5. ENVIA OS DADOS DA RAM PARA A MEMÓRIA DA GPU (VBO - Vertex Buffer Object)
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+        // 6. EXPLICA PARA A GPU COMO LER O BUFFER
+        const posLoc = gl.getAttribLocation(programa, "a_posicao");
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        // 7. LIMPA A TELA E DESENHA O TRIÂNGULO
+        gl.clearColor(0.1, 0.1, 0.15, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }, 10);
+    </script>
+  </body>
+</html>
